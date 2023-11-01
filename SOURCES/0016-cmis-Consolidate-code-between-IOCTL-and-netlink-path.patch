@@ -1,0 +1,77 @@
+From 284886fbb4a85103cd82d061ebe4d1c93730b783 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 12 Oct 2021 16:25:15 +0300
+Subject: [PATCH 16/35] cmis: Consolidate code between IOCTL and netlink paths
+
+Now that both the netlink and IOCTL paths use the same memory map
+structure for parsing, the code can be easily consolidated.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ cmis.c | 38 ++++++++++++++++----------------------
+ 1 file changed, 16 insertions(+), 22 deletions(-)
+
+diff --git a/cmis.c b/cmis.c
+index 2e01446b2315..eb7791dd59df 100644
+--- a/cmis.c
++++ b/cmis.c
+@@ -340,6 +340,20 @@ static void cmis_show_vendor_info(const struct cmis_memory_map *map)
+ 			       CMIS_CLEI_END_OFFSET, "CLEI code");
+ }
+ 
++static void cmis_show_all_common(const struct cmis_memory_map *map)
++{
++	cmis_show_identifier(map);
++	cmis_show_power_info(map);
++	cmis_show_connector(map);
++	cmis_show_cbl_asm_len(map);
++	cmis_show_sig_integrity(map);
++	cmis_show_mit_compliance(map);
++	cmis_show_mod_lvl_monitors(map);
++	cmis_show_link_len(map);
++	cmis_show_vendor_info(map);
++	cmis_show_rev_compliance(map);
++}
++
+ static void cmis_memory_map_init_buf(struct cmis_memory_map *map,
+ 				     const __u8 *id)
+ {
+@@ -367,17 +381,7 @@ void cmis_show_all_ioctl(const __u8 *id)
+ 	struct cmis_memory_map map = {};
+ 
+ 	cmis_memory_map_init_buf(&map, id);
+-
+-	cmis_show_identifier(&map);
+-	cmis_show_power_info(&map);
+-	cmis_show_connector(&map);
+-	cmis_show_cbl_asm_len(&map);
+-	cmis_show_sig_integrity(&map);
+-	cmis_show_mit_compliance(&map);
+-	cmis_show_mod_lvl_monitors(&map);
+-	cmis_show_link_len(&map);
+-	cmis_show_vendor_info(&map);
+-	cmis_show_rev_compliance(&map);
++	cmis_show_all_common(&map);
+ }
+ 
+ static void
+@@ -411,15 +415,5 @@ void cmis_show_all_nl(const struct ethtool_module_eeprom *page_zero,
+ 	struct cmis_memory_map map = {};
+ 
+ 	cmis_memory_map_init_pages(&map, page_zero, page_one);
+-
+-	cmis_show_identifier(&map);
+-	cmis_show_power_info(&map);
+-	cmis_show_connector(&map);
+-	cmis_show_cbl_asm_len(&map);
+-	cmis_show_sig_integrity(&map);
+-	cmis_show_mit_compliance(&map);
+-	cmis_show_mod_lvl_monitors(&map);
+-	cmis_show_link_len(&map);
+-	cmis_show_vendor_info(&map);
+-	cmis_show_rev_compliance(&map);
++	cmis_show_all_common(&map);
+ }
+-- 
+2.35.1
+

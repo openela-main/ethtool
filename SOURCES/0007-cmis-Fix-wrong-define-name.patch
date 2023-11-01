@@ -1,0 +1,42 @@
+From a934091a0b42cd7c71c9e71a235e57af718c9952 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Fri, 1 Oct 2021 18:06:22 +0300
+Subject: [PATCH 07/35] cmis: Fix wrong define name
+
+Offset 0x10 in the Lower Memory stores the "VccMonVoltage".
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ cmis.c | 2 +-
+ cmis.h | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/cmis.c b/cmis.c
+index 499355d0e024..408db6f26c3b 100644
+--- a/cmis.c
++++ b/cmis.c
+@@ -271,7 +271,7 @@ static void cmis_show_mod_lvl_monitors(const __u8 *id)
+ 	PRINT_TEMP("Module temperature",
+ 		   OFFSET_TO_TEMP(CMIS_CURR_TEMP_OFFSET));
+ 	PRINT_VCC("Module voltage",
+-		  OFFSET_TO_U16(CMIS_CURR_CURR_OFFSET));
++		  OFFSET_TO_U16(CMIS_CURR_VCC_OFFSET));
+ }
+ 
+ static void cmis_show_link_len_from_page(const __u8 *page_one_data)
+diff --git a/cmis.h b/cmis.h
+index cfac08f42904..e3012ccfdd79 100644
+--- a/cmis.h
++++ b/cmis.h
+@@ -11,7 +11,7 @@
+ 
+ /* Module-Level Monitors (Page 0) */
+ #define CMIS_CURR_TEMP_OFFSET			0x0E
+-#define CMIS_CURR_CURR_OFFSET			0x10
++#define CMIS_CURR_VCC_OFFSET			0x10
+ 
+ #define CMIS_CTOR_OFFSET			0xCB
+ 
+-- 
+2.35.1
+

@@ -1,0 +1,55 @@
+From 1c14a6d8ebad07bc6ff090164ca15ab7656e7167 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 14 Sep 2021 14:27:35 +0300
+Subject: [PATCH 02/35] cmis: Fix invalid memory access in IOCTL path
+
+Page 01h is an optional page that is not available for flat memory
+modules. Trying to blindly access it results in the following report
+from AddressSanitizer [1].
+
+Instead, pass the base address of the Lower Memory. This results in
+wrong information being parsed, but this never worked correctly since
+CMIS support first appeared in cited commit.
+
+The information will be parsed correctly in a follow-up submission that
+reworks the EEPROM parsing code to use a memory map with pointers to
+individual pages instead of passing one large buffer.
+
+[1]
+==968785==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x6120000001d4 at pc 0x0000004806ee bp 0x7ffefbc977a0 sp 0x7ffefbc97798
+READ of size 1 at 0x6120000001d4 thread T0
+    #0 0x4806ed in cmis_print_smf_cbl_len cmis.c:127
+    #1 0x48113e in cmis_show_link_len_from_page cmis.c:279
+    #2 0x4811e3 in cmis_show_link_len cmis.c:300
+    #3 0x481358 in qsfp_dd_show_all cmis.c:336
+    #4 0x47d190 in sff8636_show_all qsfp.c:861
+    #5 0x42130b in do_getmodule ethtool.c:4908
+    #6 0x42a38a in main ethtool.c:6383
+    #7 0x7f11db6c51e1 in __libc_start_main (/lib64/libc.so.6+0x281e1)
+    #8 0x40258d in _start (ethtool+0x40258d)
+
+Address 0x6120000001d4 is a wild pointer.
+SUMMARY: AddressSanitizer: heap-buffer-overflow cmis.c:127 in cmis_print_smf_cbl_len
+
+Fixes: 88ca347ef35a ("Add QSFP-DD support").
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ cmis.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmis.c b/cmis.c
+index 361b721f332f..1a91e798e4b8 100644
+--- a/cmis.c
++++ b/cmis.c
+@@ -297,7 +297,7 @@ static void cmis_show_link_len_from_page(const __u8 *page_one_data)
+  */
+ static void cmis_show_link_len(const __u8 *id)
+ {
+-	cmis_show_link_len_from_page(id + PAG01H_UPPER_OFFSET);
++	cmis_show_link_len_from_page(id);
+ }
+ 
+ /**
+-- 
+2.35.1
+

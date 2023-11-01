@@ -1,0 +1,92 @@
+From bda06d81f41bb1cde16a319728d479cda4b9f295 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 12 Oct 2021 16:25:24 +0300
+Subject: [PATCH 25/35] sff-8079: Request specific pages for parsing in netlink
+ path
+
+Convert the SFF-8079 code to request the required EEPROM contents in the
+netlink path as was done for CMIS and SFF-8636. It will allow us to
+remove standard-specific code from the netlink code (i.e.,
+netlink/module-eeprom.c).
+
+In addition, in the future, it will allow the netlink path to support
+parsing of SFF-8472.
+
+Tested by making sure that the output of 'ethtool -m' does not change
+before and after the patch.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ internal.h              |  2 +-
+ netlink/module-eeprom.c |  2 +-
+ sfpid.c                 | 20 ++++++++++++++++++--
+ 3 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/internal.h b/internal.h
+index 2407d3c223fa..0d9d816ab563 100644
+--- a/internal.h
++++ b/internal.h
+@@ -385,7 +385,7 @@ int rxclass_rule_del(struct cmd_context *ctx, __u32 loc);
+ 
+ /* Module EEPROM parsing code */
+ void sff8079_show_all_ioctl(const __u8 *id);
+-void sff8079_show_all_nl(const __u8 *id);
++int sff8079_show_all_nl(struct cmd_context *ctx);
+ 
+ /* Optics diagnostics */
+ void sff8472_show_all(const __u8 *id);
+diff --git a/netlink/module-eeprom.c b/netlink/module-eeprom.c
+index f04f8e134223..6d76b8a96461 100644
+--- a/netlink/module-eeprom.c
++++ b/netlink/module-eeprom.c
+@@ -321,7 +321,7 @@ static void decoder_print(struct cmd_context *ctx)
+ 
+ 	switch (module_id) {
+ 	case SFF8024_ID_SFP:
+-		sff8079_show_all_nl(page_zero->data);
++		sff8079_show_all_nl(ctx);
+ 		break;
+ 	case SFF8024_ID_QSFP:
+ 	case SFF8024_ID_QSFP28:
+diff --git a/sfpid.c b/sfpid.c
+index c214820226d1..621d1e86c278 100644
+--- a/sfpid.c
++++ b/sfpid.c
+@@ -8,8 +8,13 @@
+  */
+ 
+ #include <stdio.h>
++#include <errno.h>
+ #include "internal.h"
+ #include "sff-common.h"
++#include "netlink/extapi.h"
++
++#define SFF8079_PAGE_SIZE	0x80
++#define SFF8079_I2C_ADDRESS_LOW	0x50
+ 
+ static void sff8079_show_identifier(const __u8 *id)
+ {
+@@ -445,7 +450,18 @@ void sff8079_show_all_ioctl(const __u8 *id)
+ 	sff8079_show_all_common(id);
+ }
+ 
+-void sff8079_show_all_nl(const __u8 *id)
++int sff8079_show_all_nl(struct cmd_context *ctx)
+ {
+-	sff8079_show_all_common(id);
++	struct ethtool_module_eeprom request = {
++		.length = SFF8079_PAGE_SIZE,
++		.i2c_address = SFF8079_I2C_ADDRESS_LOW,
++	};
++	int ret;
++
++	ret = nl_get_eeprom_page(ctx, &request);
++	if (ret < 0)
++		return ret;
++	sff8079_show_all_common(request.data);
++
++	return 0;
+ }
+-- 
+2.35.1
+

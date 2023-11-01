@@ -1,0 +1,30 @@
+From f1b4bafbb30e77fedb10a23d1b70119b9059f684 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Fri, 1 Oct 2021 18:06:24 +0300
+Subject: [PATCH 09/35] sff-8636: Remove incorrect comment
+
+The comment was copied from SFF-8472 (i.e., sfpdiag.c) where the
+diagnostic page is at I2C address 0x51. SFF-8636 only uses I2C address
+0x50.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ qsfp.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/qsfp.c b/qsfp.c
+index e84226bc1554..263cf188377d 100644
+--- a/qsfp.c
++++ b/qsfp.c
+@@ -64,7 +64,7 @@
+ 
+ static struct sff8636_aw_flags {
+ 	const char *str;        /* Human-readable string, null at the end */
+-	int offset;             /* A2-relative address offset */
++	int offset;
+ 	__u8 value;             /* Alarm is on if (offset & value) != 0. */
+ } sff8636_aw_flags[] = {
+ 	{ "Laser bias current high alarm   (Chan 1)",
+-- 
+2.35.1
+

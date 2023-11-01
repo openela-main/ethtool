@@ -1,0 +1,48 @@
+From dc4a75242e8674da02a579e6c875ad4ac77a8c20 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Fri, 1 Oct 2021 18:06:25 +0300
+Subject: [PATCH 10/35] sff-8636: Fix incorrect function name
+
+The specification is called SFF-8636, not SFF-6836.
+
+Rename the function accordingly.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ qsfp.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/qsfp.c b/qsfp.c
+index 263cf188377d..3401db84352d 100644
+--- a/qsfp.c
++++ b/qsfp.c
+@@ -820,7 +820,7 @@ static void sff8636_show_dom(const __u8 *id, const __u8 *page_three, __u32 eepro
+ }
+ 
+ 
+-static void sff6836_show_page_zero(const __u8 *id)
++static void sff8636_show_page_zero(const __u8 *id)
+ {
+ 	sff8636_show_ext_identifier(id);
+ 	sff8636_show_connector(id);
+@@ -866,7 +866,7 @@ void sff8636_show_all(const __u8 *id, __u32 eeprom_len)
+ 	if ((id[SFF8636_ID_OFFSET] == SFF8024_ID_QSFP) ||
+ 		(id[SFF8636_ID_OFFSET] == SFF8024_ID_QSFP_PLUS) ||
+ 		(id[SFF8636_ID_OFFSET] == SFF8024_ID_QSFP28)) {
+-		sff6836_show_page_zero(id);
++		sff8636_show_page_zero(id);
+ 		sff8636_show_dom(id, id + 3 * 0x80, eeprom_len);
+ 	}
+ }
+@@ -875,7 +875,7 @@ void sff8636_show_all_paged(const struct ethtool_module_eeprom *page_zero,
+ 			    const struct ethtool_module_eeprom *page_three)
+ {
+ 	sff8636_show_identifier(page_zero->data);
+-	sff6836_show_page_zero(page_zero->data);
++	sff8636_show_page_zero(page_zero->data);
+ 	if (page_three)
+ 		sff8636_show_dom(page_zero->data, page_three->data - 0x80,
+ 				 ETH_MODULE_SFF_8636_MAX_LEN);
+-- 
+2.35.1
+

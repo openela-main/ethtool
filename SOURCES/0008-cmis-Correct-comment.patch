@@ -1,0 +1,29 @@
+From 030ba06f12761d13722a12773bb8063748242b50 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Fri, 1 Oct 2021 18:06:23 +0300
+Subject: [PATCH 08/35] cmis: Correct comment
+
+The file is concerned with CMIS support, not QSFP-DD which is the
+physical form factor.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ cmis.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/cmis.c b/cmis.c
+index 408db6f26c3b..591cc72953b7 100644
+--- a/cmis.c
++++ b/cmis.c
+@@ -1,7 +1,7 @@
+ /**
+  * Description:
+  *
+- * This module adds QSFP-DD support to ethtool. The changes are similar to
++ * This module adds CMIS support to ethtool. The changes are similar to
+  * the ones already existing in qsfp.c, but customized to use the memory
+  * addresses and logic as defined in the specification's document.
+  *
+-- 
+2.35.1
+

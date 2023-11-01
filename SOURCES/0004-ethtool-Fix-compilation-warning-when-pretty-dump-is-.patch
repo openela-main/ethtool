@@ -1,0 +1,84 @@
+From 3960c91ade7b1ca9979eec5200a90dc11f339cfd Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 14 Sep 2021 14:27:37 +0300
+Subject: [PATCH 04/35] ethtool: Fix compilation warning when pretty dump is
+ disabled
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When pretty dump is disabled (i.e., configure --disable-pretty-dump),
+gcc 11.2.1 emits the following warning:
+
+ethtool.c: In function ‘dump_regs’:
+ethtool.c:1160:31: warning: comparison is always false due to limited range of data type [-Wtype-limits]
+ 1160 |                 for (i = 0; i < ARRAY_SIZE(driver_list); i++)
+      |                               ^
+
+Fix it by avoiding iterating over 'driver_list' when pretty dump is
+disabled.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ ethtool.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/ethtool.c b/ethtool.c
+index 33a0a492cb15..1b79e9f8d958 100644
+--- a/ethtool.c
++++ b/ethtool.c
+@@ -1089,12 +1089,12 @@ static int parse_hkey(char **rss_hkey, u32 key_size,
+ 	return 0;
+ }
+ 
++#ifdef ETHTOOL_ENABLE_PRETTY_DUMP
+ static const struct {
+ 	const char *name;
+ 	int (*func)(struct ethtool_drvinfo *info, struct ethtool_regs *regs);
+ 
+ } driver_list[] = {
+-#ifdef ETHTOOL_ENABLE_PRETTY_DUMP
+ 	{ "8139cp", realtek_dump_regs },
+ 	{ "8139too", realtek_dump_regs },
+ 	{ "r8169", realtek_dump_regs },
+@@ -1129,8 +1129,8 @@ static const struct {
+ 	{ "fec", fec_dump_regs },
+ 	{ "igc", igc_dump_regs },
+ 	{ "bnxt_en", bnxt_dump_regs },
+-#endif
+ };
++#endif
+ 
+ void dump_hex(FILE *file, const u8 *data, int len, int offset)
+ {
+@@ -1149,14 +1149,15 @@ void dump_hex(FILE *file, const u8 *data, int len, int offset)
+ static int dump_regs(int gregs_dump_raw, int gregs_dump_hex,
+ 		     struct ethtool_drvinfo *info, struct ethtool_regs *regs)
+ {
+-	unsigned int i;
+-
+ 	if (gregs_dump_raw) {
+ 		fwrite(regs->data, regs->len, 1, stdout);
+ 		goto nested;
+ 	}
+ 
+-	if (!gregs_dump_hex)
++#ifdef ETHTOOL_ENABLE_PRETTY_DUMP
++	if (!gregs_dump_hex) {
++		unsigned int i;
++
+ 		for (i = 0; i < ARRAY_SIZE(driver_list); i++)
+ 			if (!strncmp(driver_list[i].name, info->driver,
+ 				     ETHTOOL_BUSINFO_LEN)) {
+@@ -1168,6 +1169,8 @@ static int dump_regs(int gregs_dump_raw, int gregs_dump_hex,
+ 				 */
+ 				break;
+ 			}
++	}
++#endif
+ 
+ 	dump_hex(stdout, regs->data, regs->len, 0);
+ 
+-- 
+2.35.1
+

@@ -1,0 +1,108 @@
+From 48391fa16592b47d37ef63466111c751a10c3e56 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 23 Nov 2021 19:41:02 +0200
+Subject: [PATCH 34/35] sff-8636: Print Power set and Power override bits
+
+Print the SFF-8636 Power set and Power override bits when dumping EEPROM
+contents via the '-m' option. They can be used to understand low power
+mode enforcement by the host.
+
+The 'SFF8636_LOW_PWR_MODE' define is renamed to 'SFF8636_LOW_PWR_SET' to
+reflect its naming in the standard for QSFP+/QSFP28.
+
+Example output:
+
+ # ethtool -m swp13
+ Identifier                                : 0x11 (QSFP28)
+ ...
+ Extended identifier description           : 5.0W max. Power consumption,  High Power Class (> 3.5 W) enabled
+ Power set                                 : Off
+ Power override                            : On
+ ...
+ Transmit avg optical power (Channel 1)    : 0.7633 mW / -1.17 dBm
+ Transmit avg optical power (Channel 2)    : 0.7649 mW / -1.16 dBm
+ Transmit avg optical power (Channel 3)    : 0.7696 mW / -1.14 dBm
+ Transmit avg optical power (Channel 4)    : 0.7739 mW / -1.11 dBm
+ Rcvr signal avg optical power(Channel 1)  : 0.9240 mW / -0.34 dBm
+ Rcvr signal avg optical power(Channel 2)  : 0.9129 mW / -0.40 dBm
+ Rcvr signal avg optical power(Channel 3)  : 0.9194 mW / -0.36 dBm
+ Rcvr signal avg optical power(Channel 4)  : 0.8708 mW / -0.60 dBm
+
+ # ethtool --set-module swp13 power-mode-policy auto
+
+ # ethtool -m swp13
+ Identifier                                : 0x11 (QSFP28)
+ ...
+ Extended identifier description           : 5.0W max. Power consumption,  High Power Class (> 3.5 W) not enabled
+ Power set                                 : On
+ Power override                            : On
+ ...
+ Transmit avg optical power (Channel 1)    : 0.0000 mW / -inf dBm
+ Transmit avg optical power (Channel 2)    : 0.0000 mW / -inf dBm
+ Transmit avg optical power (Channel 3)    : 0.0000 mW / -inf dBm
+ Transmit avg optical power (Channel 4)    : 0.0000 mW / -inf dBm
+ Rcvr signal avg optical power(Channel 1)  : 0.0000 mW / -inf dBm
+ Rcvr signal avg optical power(Channel 2)  : 0.0000 mW / -inf dBm
+ Rcvr signal avg optical power(Channel 3)  : 0.0000 mW / -inf dBm
+ Rcvr signal avg optical power(Channel 4)  : 0.0000 mW / -inf dBm
+
+ # ethtool --set-module swp13 power-mode-policy high
+
+ # ethtool -m swp13
+ Identifier                                : 0x11 (QSFP28)
+ ...
+ Extended identifier description           : 5.0W max. Power consumption,  High Power Class (> 3.5 W) enabled
+ Power set                                 : Off
+ Power override                            : On
+ ...
+ Transmit avg optical power (Channel 1)    : 0.7733 mW / -1.12 dBm
+ Transmit avg optical power (Channel 2)    : 0.7754 mW / -1.10 dBm
+ Transmit avg optical power (Channel 3)    : 0.7885 mW / -1.03 dBm
+ Transmit avg optical power (Channel 4)    : 0.7886 mW / -1.03 dBm
+ Rcvr signal avg optical power(Channel 1)  : 0.9248 mW / -0.34 dBm
+ Rcvr signal avg optical power(Channel 2)  : 0.9129 mW / -0.40 dBm
+ Rcvr signal avg optical power(Channel 3)  : 0.9187 mW / -0.37 dBm
+ Rcvr signal avg optical power(Channel 4)  : 0.8785 mW / -0.56 dBm
+
+In the above example, the LPMode signal is ignored (Power override is
+always on) and low power mode is controlled via software only.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ qsfp.c | 6 ++++++
+ qsfp.h | 2 +-
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/qsfp.c b/qsfp.c
+index b3c9e1516af9..57aac86bd5f6 100644
+--- a/qsfp.c
++++ b/qsfp.c
+@@ -268,6 +268,12 @@ static void sff8636_show_ext_identifier(const struct sff8636_memory_map *map)
+ 		printf(" High Power Class (> 3.5 W) enabled\n");
+ 	else
+ 		printf(" High Power Class (> 3.5 W) not enabled\n");
++	printf("\t%-41s : ", "Power set");
++	printf("%s\n", ONOFF(map->lower_memory[SFF8636_PWR_MODE_OFFSET] &
++			     SFF8636_LOW_PWR_SET));
++	printf("\t%-41s : ", "Power override");
++	printf("%s\n", ONOFF(map->lower_memory[SFF8636_PWR_MODE_OFFSET] &
++			     SFF8636_PWR_OVERRIDE));
+ }
+ 
+ static void sff8636_show_connector(const struct sff8636_memory_map *map)
+diff --git a/qsfp.h b/qsfp.h
+index 1d8f24b5cbc2..aabf09fdc623 100644
+--- a/qsfp.h
++++ b/qsfp.h
+@@ -180,7 +180,7 @@
+ 
+ #define	SFF8636_PWR_MODE_OFFSET		0x5D
+ #define	 SFF8636_HIGH_PWR_ENABLE		(1 << 2)
+-#define	 SFF8636_LOW_PWR_MODE			(1 << 1)
++#define	 SFF8636_LOW_PWR_SET			(1 << 1)
+ #define	 SFF8636_PWR_OVERRIDE			(1 << 0)
+ 
+ #define	SFF8636_TX_APP_SELECT_4_OFFSET	0x5E
+-- 
+2.35.1
+

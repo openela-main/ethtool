@@ -1,0 +1,84 @@
+From 37093971b0f645542c4bff603f41f807e8023bd3 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 23 Nov 2021 19:40:55 +0200
+Subject: [PATCH 27/35] sff-8636: Use an SFF-8636 specific define for maximum
+ number of channels
+
+'MAX_CHANNEL_NUM' is defined in the common SFF code as 4 and used to set
+the size of the per-channel diagnostics array in the common 'sff_diags'
+structure.
+
+The CMIS parsing code is also going to use the structure, but it can
+have up to 32 channels, unlike SFF-8636 that only has 4.
+
+Therefore, set 'MAX_CHANNEL_NUM' to 32 and change the SFF-8636 code to
+use an SFF-8636 specific define instead of the common 'MAX_CHANNEL_NUM'.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ qsfp.c       | 9 +++++----
+ sff-common.h | 2 +-
+ 2 files changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/qsfp.c b/qsfp.c
+index e7c2f51cd9c6..58c4c4775e9b 100644
+--- a/qsfp.c
++++ b/qsfp.c
+@@ -71,6 +71,7 @@ struct sff8636_memory_map {
+ 
+ #define SFF8636_PAGE_SIZE	0x80
+ #define SFF8636_I2C_ADDRESS	0x50
++#define SFF8636_MAX_CHANNEL_NUM	4
+ 
+ #define MAX_DESC_SIZE	42
+ 
+@@ -761,7 +762,7 @@ static void sff8636_dom_parse(const struct sff8636_memory_map *map,
+ 
+ out:
+ 	/* Channel Specific Data */
+-	for (i = 0; i < MAX_CHANNEL_NUM; i++) {
++	for (i = 0; i < SFF8636_MAX_CHANNEL_NUM; i++) {
+ 		u8 rx_power_offset, tx_bias_offset;
+ 		u8 tx_power_offset;
+ 
+@@ -832,13 +833,13 @@ static void sff8636_show_dom(const struct sff8636_memory_map *map)
+ 	printf("\t%-41s : %s\n", "Alarm/warning flags implemented",
+ 		(sd.supports_alarms ? "Yes" : "No"));
+ 
+-	for (i = 0; i < MAX_CHANNEL_NUM; i++) {
++	for (i = 0; i < SFF8636_MAX_CHANNEL_NUM; i++) {
+ 		snprintf(power_string, MAX_DESC_SIZE, "%s (Channel %d)",
+ 					"Laser tx bias current", i+1);
+ 		PRINT_BIAS(power_string, sd.scd[i].bias_cur);
+ 	}
+ 
+-	for (i = 0; i < MAX_CHANNEL_NUM; i++) {
++	for (i = 0; i < SFF8636_MAX_CHANNEL_NUM; i++) {
+ 		snprintf(power_string, MAX_DESC_SIZE, "%s (Channel %d)",
+ 					"Transmit avg optical power", i+1);
+ 		PRINT_xX_PWR(power_string, sd.scd[i].tx_power);
+@@ -849,7 +850,7 @@ static void sff8636_show_dom(const struct sff8636_memory_map *map)
+ 	else
+ 		rx_power_string = "Rcvr signal avg optical power";
+ 
+-	for (i = 0; i < MAX_CHANNEL_NUM; i++) {
++	for (i = 0; i < SFF8636_MAX_CHANNEL_NUM; i++) {
+ 		snprintf(power_string, MAX_DESC_SIZE, "%s(Channel %d)",
+ 					rx_power_string, i+1);
+ 		PRINT_xX_PWR(power_string, sd.scd[i].rx_power);
+diff --git a/sff-common.h b/sff-common.h
+index 2183f41ff9c9..aab306e0b74f 100644
+--- a/sff-common.h
++++ b/sff-common.h
+@@ -160,7 +160,7 @@ struct sff_channel_diags {
+ /* Module Monitoring Fields */
+ struct sff_diags {
+ 
+-#define MAX_CHANNEL_NUM 4
++#define MAX_CHANNEL_NUM 32
+ #define LWARN 0
+ #define HWARN 1
+ #define LALRM 2
+-- 
+2.35.1
+

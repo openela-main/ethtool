@@ -1,0 +1,45 @@
+From 2dcf6b9dc1c1874705b9e71e13e00dde9f7f576c Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 23 Nov 2021 19:40:56 +0200
+Subject: [PATCH 28/35] sff-common: Move OFFSET_TO_U16_PTR() to common header
+ file
+
+The define is also useful for CMIS, so move it from SFF-8636 to the
+common header file.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ qsfp.c       | 1 -
+ sff-common.h | 4 ++--
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/qsfp.c b/qsfp.c
+index 58c4c4775e9b..b3c9e1516af9 100644
+--- a/qsfp.c
++++ b/qsfp.c
+@@ -700,7 +700,6 @@ sff8636_show_wavelength_or_copper_compliance(const struct sff8636_memory_map *ma
+  * Second byte are 1/256th of degree, which are added to the dec part.
+  */
+ #define SFF8636_OFFSET_TO_TEMP(offset) ((__s16)OFFSET_TO_U16(offset))
+-#define OFFSET_TO_U16_PTR(ptr, offset) (ptr[offset] << 8 | ptr[(offset) + 1])
+ 
+ static void sff8636_dom_parse(const struct sff8636_memory_map *map,
+ 			      struct sff_diags *sd)
+diff --git a/sff-common.h b/sff-common.h
+index aab306e0b74f..9e323008ba19 100644
+--- a/sff-common.h
++++ b/sff-common.h
+@@ -126,8 +126,8 @@
+ #define  SFF8024_ENCODING_PAM4			0x08
+ 
+ /* Most common case: 16-bit unsigned integer in a certain unit */
+-#define OFFSET_TO_U16(offset) \
+-		(id[offset] << 8 | id[(offset) + 1])
++#define OFFSET_TO_U16_PTR(ptr, offset) (ptr[offset] << 8 | ptr[(offset) + 1])
++#define OFFSET_TO_U16(offset) OFFSET_TO_U16_PTR(id, offset)
+ 
+ # define PRINT_xX_PWR(string, var)                             \
+ 		printf("\t%-41s : %.4f mW / %.2f dBm\n", (string),         \
+-- 
+2.35.1
+
