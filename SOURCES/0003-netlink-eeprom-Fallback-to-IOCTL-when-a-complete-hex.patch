@@ -1,0 +1,87 @@
+From 04d36d7c373db7069554a6d21ece628e2cf6b21c Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 14 Sep 2021 14:27:36 +0300
+Subject: [PATCH 03/35] netlink: eeprom: Fallback to IOCTL when a complete
+ hex/raw dump is requested
+
+The IOCTL backend provides a complete hex/raw dump of the module EEPROM
+contents:
+
+ # ethtool -m swp11 hex on | wc -l
+ 34
+
+ # ethtool -m swp11 raw on | wc -c
+ 512
+
+With the netlink backend, only the first 128 bytes from I2C address 0x50
+are dumped:
+
+ # ethtool -m swp11 hex on | wc -l
+ 10
+
+ # ethtool -m swp11 raw on | wc -c
+ 128
+
+The presence of optional / banked pages is unknown without parsing the
+EEPROM contents which is unavailable when pretty printing is disabled
+(i.e., configure --disable-pretty-dump). With the IOCTL backend, this
+parsing happens inside the kernel.
+
+Therefore, when a complete hex/raw dump is requested, fallback to the
+IOCTL backend.
+
+After the patch:
+
+ # ethtool -m swp11 hex on | wc -l
+ 34
+
+ # ethtool -m swp11 raw on | wc -c
+ 512
+
+This avoids breaking users that are relying on current behavior.
+
+If users want a hex/raw dump of optional/banked pages that are not
+returned with the IOCTL backend, they will be required to request these
+explicitly via the netlink backend. For example:
+
+ # ethtool -m swp11 hex on page 0x2
+
+This is desirable as that way there is no ambiguity regarding the
+location of optional/banked pages in the dump.
+
+Another way to implement the above would be to use the 'nlchk' callback
+added in commit 67a9ef551661 ("ethtool: add nlchk for redirecting to
+netlink"). However, it is called before the netlink instance is
+initialized and before the command line parameters are parsed via
+nl_parser().
+
+Fixes: 25b64c66f58d ("ethtool: Add netlink handler for getmodule (-m)")
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ netlink/module-eeprom.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/netlink/module-eeprom.c b/netlink/module-eeprom.c
+index 38e7d2cd6cf3..e9a122df3259 100644
+--- a/netlink/module-eeprom.c
++++ b/netlink/module-eeprom.c
+@@ -365,6 +365,16 @@ int nl_getmodule(struct cmd_context *ctx)
+ 		return -EINVAL;
+ 	}
+ 
++	/* When complete hex/raw dump of the EEPROM is requested, fallback to
++	 * ioctl. Netlink can only request specific pages.
++	 */
++	if ((getmodule_cmd_params.dump_hex || getmodule_cmd_params.dump_raw) &&
++	    !getmodule_cmd_params.page && !getmodule_cmd_params.bank &&
++	    !getmodule_cmd_params.i2c_address) {
++		nlctx->ioctl_fallback = true;
++		return -EOPNOTSUPP;
++	}
++
+ 	request.i2c_address = ETH_I2C_ADDRESS_LOW;
+ 	request.length = 128;
+ 	ret = page_fetch(nlctx, &request);
+-- 
+2.35.1
+

@@ -1,0 +1,35 @@
+From 539a255fab8401a197e2a98c0c3dd39800ca65e5 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Fri, 1 Oct 2021 18:06:27 +0300
+Subject: [PATCH 12/35] sff-8636: Remove extra blank lines
+
+Not needed, so remove them.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ qsfp.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/qsfp.c b/qsfp.c
+index d1464cb50fdc..3f37f1036e96 100644
+--- a/qsfp.c
++++ b/qsfp.c
+@@ -738,7 +738,6 @@ static void sff8636_dom_parse(const __u8 *id, const __u8 *page_three, struct sff
+ 		sd->scd[i].rx_power = OFFSET_TO_U16(rx_power_offset);
+ 		sd->scd[i].tx_power = OFFSET_TO_U16(tx_power_offset);
+ 	}
+-
+ }
+ 
+ static void sff8636_show_dom(const __u8 *id, const __u8 *page_three, __u32 eeprom_len)
+@@ -819,7 +818,6 @@ static void sff8636_show_dom(const __u8 *id, const __u8 *page_three, __u32 eepro
+ 	}
+ }
+ 
+-
+ static void sff8636_show_page_zero(const __u8 *id)
+ {
+ 	sff8636_show_ext_identifier(id);
+-- 
+2.35.1
+

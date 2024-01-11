@@ -1,0 +1,155 @@
+From 4a86034f138e1a96e54047b8036b0a4425e99944 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 23 Nov 2021 19:41:00 +0200
+Subject: [PATCH 32/35] cmis: Print Module State and Fault Cause
+
+Print the CMIS Module State when dumping EEPROM contents via the '-m'
+option. It can be used, for example, to test module power mode settings.
+
+Example output:
+
+ # ethtool -m swp11
+ Identifier                                : 0x18 (QSFP-DD Double Density 8X Pluggable Transceiver (INF-8628))
+ ...
+ Module State                              : 0x03 (ModuleReady)
+
+ # ethtool --set-module swp11 power-mode-policy auto
+
+ # ethtool -m swp11
+ Identifier                                : 0x18 (QSFP-DD Double Density 8X Pluggable Transceiver (INF-8628))
+ ...
+ Module State                              : 0x01 (ModuleLowPwr)
+
+In case the module is in fault state, print the CMIS Module Fault Cause.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ cmis.c | 70 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ cmis.h | 16 ++++++++++++++
+ 2 files changed, 86 insertions(+)
+
+diff --git a/cmis.c b/cmis.c
+index d7b7097139b3..a32cc9f8b1f6 100644
+--- a/cmis.c
++++ b/cmis.c
+@@ -402,6 +402,74 @@ static void cmis_show_vendor_info(const struct cmis_memory_map *map)
+ 			       CMIS_CLEI_END_OFFSET, "CLEI code");
+ }
+ 
++/* Print the current Module State. Relevant documents:
++ * [1] CMIS Rev. 5, pag. 57, section 6.3.2.2, Figure 6-3
++ * [2] CMIS Rev. 5, pag. 60, section 6.3.2.3, Figure 6-4
++ * [3] CMIS Rev. 5, pag. 107, section 8.2.2, Table 8-6
++ */
++static void cmis_show_mod_state(const struct cmis_memory_map *map)
++{
++	__u8 mod_state;
++
++	mod_state = (map->lower_memory[CMIS_MODULE_STATE_OFFSET] &
++		     CMIS_MODULE_STATE_MASK) >> 1;
++	printf("\t%-41s : 0x%02x", "Module State", mod_state);
++	switch (mod_state) {
++	case CMIS_MODULE_STATE_MODULE_LOW_PWR:
++		printf(" (ModuleLowPwr)\n");
++		break;
++	case CMIS_MODULE_STATE_MODULE_PWR_UP:
++		printf(" (ModulePwrUp)\n");
++		break;
++	case CMIS_MODULE_STATE_MODULE_READY:
++		printf(" (ModuleReady)\n");
++		break;
++	case CMIS_MODULE_STATE_MODULE_PWR_DN:
++		printf(" (ModulePwrDn)\n");
++		break;
++	case CMIS_MODULE_STATE_MODULE_FAULT:
++		printf(" (ModuleFault)\n");
++		break;
++	default:
++		printf(" (reserved or unknown)\n");
++		break;
++	}
++}
++
++/* Print the Module Fault Information. Relevant documents:
++ * [1] CMIS Rev. 5, pag. 64, section 6.3.2.12
++ * [2] CMIS Rev. 5, pag. 115, section 8.2.10, Table 8-15
++ */
++static void cmis_show_mod_fault_cause(const struct cmis_memory_map *map)
++{
++	__u8 mod_state, fault_cause;
++
++	mod_state = (map->lower_memory[CMIS_MODULE_STATE_OFFSET] &
++		     CMIS_MODULE_STATE_MASK) >> 1;
++	if (mod_state != CMIS_MODULE_STATE_MODULE_FAULT)
++		return;
++
++	fault_cause = map->lower_memory[CMIS_MODULE_FAULT_OFFSET];
++	printf("\t%-41s : 0x%02x", "Module Fault Cause", fault_cause);
++	switch (fault_cause) {
++	case CMIS_MODULE_FAULT_NO_FAULT:
++		printf(" (No fault detected / not supported)\n");
++		break;
++	case CMIS_MODULE_FAULT_TEC_RUNAWAY:
++		printf(" (TEC runaway)\n");
++		break;
++	case CMIS_MODULE_FAULT_DATA_MEM_CORRUPTED:
++		printf(" (Data memory corrupted)\n");
++		break;
++	case CMIS_MODULE_FAULT_PROG_MEM_CORRUPTED:
++		printf(" (Program memory corrupted)\n");
++		break;
++	default:
++		printf(" (reserved or unknown)\n");
++		break;
++	}
++}
++
+ static void cmis_parse_dom_power_type(const struct cmis_memory_map *map,
+ 				      struct sff_diags *sd)
+ {
+@@ -775,6 +843,8 @@ static void cmis_show_all_common(const struct cmis_memory_map *map)
+ 	cmis_show_link_len(map);
+ 	cmis_show_vendor_info(map);
+ 	cmis_show_rev_compliance(map);
++	cmis_show_mod_state(map);
++	cmis_show_mod_fault_cause(map);
+ 	cmis_show_dom(map);
+ }
+ 
+diff --git a/cmis.h b/cmis.h
+index 310697b0ef32..2c67ad5640ab 100644
+--- a/cmis.h
++++ b/cmis.h
+@@ -7,6 +7,15 @@
+ #define CMIS_MEMORY_MODEL_OFFSET		0x02
+ #define CMIS_MEMORY_MODEL_MASK			0x80
+ 
++/* Global Status Information (Page 0) */
++#define CMIS_MODULE_STATE_OFFSET		0x03
++#define CMIS_MODULE_STATE_MASK			0x0E
++#define CMIS_MODULE_STATE_MODULE_LOW_PWR	0x01
++#define CMIS_MODULE_STATE_MODULE_PWR_UP		0x02
++#define CMIS_MODULE_STATE_MODULE_READY		0x03
++#define CMIS_MODULE_STATE_MODULE_PWR_DN		0x04
++#define CMIS_MODULE_STATE_MODULE_FAULT		0x05
++
+ /* Module Flags (Page 0) */
+ #define CMIS_VCC_AW_OFFSET			0x09
+ #define CMIS_VCC_LWARN_STATUS			0x80
+@@ -27,6 +36,13 @@
+ #define CMIS_CURR_TEMP_OFFSET			0x0E
+ #define CMIS_CURR_VCC_OFFSET			0x10
+ 
++/* Module Fault Information (Page 0) */
++#define CMIS_MODULE_FAULT_OFFSET		0x29
++#define CMIS_MODULE_FAULT_NO_FAULT		0x00
++#define CMIS_MODULE_FAULT_TEC_RUNAWAY		0x01
++#define CMIS_MODULE_FAULT_DATA_MEM_CORRUPTED	0x02
++#define CMIS_MODULE_FAULT_PROG_MEM_CORRUPTED	0x03
++
+ #define CMIS_CTOR_OFFSET			0xCB
+ 
+ /* Vendor related information (Page 0) */
+-- 
+2.35.1
+

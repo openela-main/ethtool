@@ -1,0 +1,73 @@
+From 2e122ad9aa2aa0259df1035e3ec2765d8e008394 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Tue, 12 Oct 2021 16:25:19 +0300
+Subject: [PATCH 20/35] sff-8636: Consolidate code between IOCTL and netlink
+ paths
+
+Now that both the netlink and IOCTL paths use the same memory map
+structure for parsing, the code can be easily consolidated.
+
+Note that the switch-case statement is not necessary for the netlink
+path, as the netlink code (i.e., netlink/module-eeprom.c) already
+performed the check, but it is required for the IOCTL path.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ qsfp.c | 29 +++++++++++++++--------------
+ 1 file changed, 15 insertions(+), 14 deletions(-)
+
+diff --git a/qsfp.c b/qsfp.c
+index 354b3b1ce9ff..4aa49351e6b7 100644
+--- a/qsfp.c
++++ b/qsfp.c
+@@ -898,6 +898,19 @@ static void sff8636_show_page_zero(const struct sff8636_memory_map *map)
+ 				     SFF8636_REV_COMPLIANCE_OFFSET);
+ }
+ 
++static void sff8636_show_all_common(const struct sff8636_memory_map *map)
++{
++	sff8636_show_identifier(map);
++	switch (map->lower_memory[SFF8636_ID_OFFSET]) {
++	case SFF8024_ID_QSFP:
++	case SFF8024_ID_QSFP_PLUS:
++	case SFF8024_ID_QSFP28:
++		sff8636_show_page_zero(map);
++		sff8636_show_dom(map);
++		break;
++	}
++}
++
+ static void sff8636_memory_map_init_buf(struct sff8636_memory_map *map,
+ 					const __u8 *id, __u32 eeprom_len)
+ {
+@@ -931,16 +944,7 @@ void sff8636_show_all_ioctl(const __u8 *id, __u32 eeprom_len)
+ 	}
+ 
+ 	sff8636_memory_map_init_buf(&map, id, eeprom_len);
+-
+-	sff8636_show_identifier(&map);
+-	switch (map.lower_memory[SFF8636_ID_OFFSET]) {
+-	case SFF8024_ID_QSFP:
+-	case SFF8024_ID_QSFP_PLUS:
+-	case SFF8024_ID_QSFP28:
+-		sff8636_show_page_zero(&map);
+-		sff8636_show_dom(&map);
+-		break;
+-	}
++	sff8636_show_all_common(&map);
+ }
+ 
+ static void
+@@ -974,8 +978,5 @@ void sff8636_show_all_nl(const struct ethtool_module_eeprom *page_zero,
+ 	struct sff8636_memory_map map = {};
+ 
+ 	sff8636_memory_map_init_pages(&map, page_zero, page_three);
+-
+-	sff8636_show_identifier(&map);
+-	sff8636_show_page_zero(&map);
+-	sff8636_show_dom(&map);
++	sff8636_show_all_common(&map);
+ }
+-- 
+2.35.1
+

@@ -1,0 +1,66 @@
+From 5b46ca06c9888c663a74bdd804b0ecb7199cfb62 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Fri, 1 Oct 2021 18:06:21 +0300
+Subject: [PATCH 06/35] cmis: Fix CLEI code parsing
+
+In CMIS, unlike SFF-8636, there is no presence indication for the CLEI
+code (Common Language Equipment Identification) field. The field is
+always present, but might not be supported. In which case, "a value of
+all ASCII 20h (spaces) shall be entered".
+
+Therefore, remove the erroneous check which seems to be influenced from
+SFF-8636 and only print the string if it is supported and has a non-zero
+length.
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+---
+ cmis.c | 8 +++++---
+ cmis.h | 4 ++--
+ 2 files changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/cmis.c b/cmis.c
+index 1a91e798e4b8..499355d0e024 100644
+--- a/cmis.c
++++ b/cmis.c
+@@ -307,6 +307,8 @@ static void cmis_show_link_len(const __u8 *id)
+  */
+ static void cmis_show_vendor_info(const __u8 *id)
+ {
++	const char *clei = (const char *)(id + CMIS_CLEI_START_OFFSET);
++
+ 	sff_show_ascii(id, CMIS_VENDOR_NAME_START_OFFSET,
+ 		       CMIS_VENDOR_NAME_END_OFFSET, "Vendor name");
+ 	cmis_show_oui(id);
+@@ -319,9 +321,9 @@ static void cmis_show_vendor_info(const __u8 *id)
+ 	sff_show_ascii(id, CMIS_DATE_YEAR_OFFSET,
+ 		       CMIS_DATE_VENDOR_LOT_OFFSET + 1, "Date code");
+ 
+-	if (id[CMIS_CLEI_PRESENT_BYTE] & CMIS_CLEI_PRESENT_MASK)
+-		sff_show_ascii(id, CMIS_CLEI_START_OFFSET,
+-			       CMIS_CLEI_END_OFFSET, "CLEI code");
++	if (*clei && strncmp(clei, CMIS_CLEI_BLANK, CMIS_CLEI_LEN))
++		sff_show_ascii(id, CMIS_CLEI_START_OFFSET, CMIS_CLEI_END_OFFSET,
++			       "CLEI code");
+ }
+ 
+ void qsfp_dd_show_all(const __u8 *id)
+diff --git a/cmis.h b/cmis.h
+index 78ee1495bc33..cfac08f42904 100644
+--- a/cmis.h
++++ b/cmis.h
+@@ -34,10 +34,10 @@
+ #define CMIS_DATE_VENDOR_LOT_OFFSET		0xBC
+ 
+ /* CLEI Code (Page 0) */
+-#define CMIS_CLEI_PRESENT_BYTE			0x02
+-#define CMIS_CLEI_PRESENT_MASK			0x20
+ #define CMIS_CLEI_START_OFFSET			0xBE
+ #define CMIS_CLEI_END_OFFSET			0xC7
++#define CMIS_CLEI_BLANK				"          "
++#define CMIS_CLEI_LEN				0x0A
+ 
+ /* Cable assembly length */
+ #define CMIS_CBL_ASM_LEN_OFFSET			0xCA
+-- 
+2.35.1
+
