@@ -1,7 +1,7 @@
 Summary:        Settings tool for Ethernet NICs
 Name:           ethtool
 Epoch:          2
-Version:        6.2
+Version:        6.11
 Release:        1%{?dist}
 License:        GPLv2
 URL:            https://www.kernel.org/pub/software/network/%{name}/
@@ -43,10 +43,15 @@ make check
 %{_mandir}/man8/%{name}.8*
 
 %changelog
+* Wed Oct  9 2024 Ivan Vecera <ivecera@redhat.com> - 2:6.11-1
+- Upgrade to 6.11 (RHEL-60269)
+
+* Wed Sep 25 2024 Ivan Vecera <ivecera@redhat.com> - 2:6.10-1
+- Upgrade to 6.10 (RHEL-60269)
+
 * Mon Mar 13 2023 Ivan Vecera <ivecera@redhat.com> - 2:6.2-1
 - Update to 6.2
   Resoves: rhbz#2173768
-
 * Wed Jan 19 2022 Davide Cavalca <dcavalca@centosproject.org> - 2:5.16-1
 - Update to 5.16
   Resolves: rhbz#2042556
