@@ -1,16 +1,15 @@
 Summary:        Settings tool for Ethernet NICs
 Name:           ethtool
 Epoch:          2
-Version:        6.11
-Release:        5%{?dist}
+Version:        6.15
+Release:        2%{?dist}
 # {json_print,qsfp,sff-common}.{c,h} are GPL-2.0-or-later, rest is GPL-2.0-only
 License:        GPL-2.0-only AND GPL-2.0-or-later
 URL:            https://www.kernel.org/pub/software/network/%{name}/
 Source0:        https://www.kernel.org/pub/software/network/%{name}/%{name}-%{version}.tar.xz
 Source1:        https://www.kernel.org/pub/software/network/%{name}/%{name}-%{version}.tar.sign
 Source2:        https://keys.openpgp.org/vks/v1/by-fingerprint/D2CB120AB45957B721CD9596F4554567B91DE934
-# RHEL-75979
-Patch1:         0001-fix-MDI-X-showing-as-Unknown-instead-of-off-auto.patch
+Patch0:         0001-netlink-fix-missing-headers-in-text-output.patch
 BuildRequires:  gnupg2, xz
 BuildRequires:  gcc
 BuildRequires:  libmnl-devel
@@ -24,7 +23,7 @@ network devices, especially of Ethernet devices.
 
 %prep
 xzcat '%{SOURCE0}' | %{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data=-
-%autosetup
+%autosetup -p1
 
 %build
 %configure
@@ -44,8 +43,17 @@ make check
 %dir %{_datadir}/bash-completion/completions/
 %{_datadir}/bash-completion/completions/%{name}
 %{_mandir}/man8/%{name}.8*
+%{_datadir}/metainfo/org.kernel.software.network.ethtool.metainfo.xml
 
 %changelog
+* Fri Aug 01 2025 Mohammad Heib <mheib@redhat.com>
+- netlink: fix missing headers in text output.
+  Resolves: RHEL-106544
+
+* Tue Jun 24 2025 Mohammad Heib <mheib@redhat.com> - 2:6.15-1
+- Update to latest upstream release v6.15.
+  Resolves RHEL-99667.
+
 * Mon Apr 28 2025 Michal Schmidt <mschmidt@redhat.com> - 2:6.11-5
 - Fix MDI-X showing as Unknown (RHEL-75979)
 
