@@ -1,13 +1,14 @@
 Summary:        Settings tool for Ethernet NICs
 Name:           ethtool
 Epoch:          2
-Version:        6.11
-Release:        1%{?dist}
+Version:        6.15
+Release:        2%{?dist}
 License:        GPLv2
 URL:            https://www.kernel.org/pub/software/network/%{name}/
 Source0:        https://www.kernel.org/pub/software/network/%{name}/%{name}-%{version}.tar.xz
 Source1:        https://www.kernel.org/pub/software/network/%{name}/%{name}-%{version}.tar.sign
 Source2:        gpgkey-D2CB120AB45957B721CD9596F4554567B91DE934.gpg
+Patch0:         0001-netlink-fix-missing-headers-in-text-output.patch
 BuildRequires:  gnupg2, xz
 BuildRequires:  gcc
 BuildRequires:  libmnl-devel
@@ -22,6 +23,7 @@ network devices, especially of Ethernet devices.
 %prep
 xzcat '%{SOURCE0}' | %{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data=-
 %setup -q
+%autosetup -p1
 
 %build
 %configure
@@ -41,8 +43,17 @@ make check
 %dir %{_datadir}/bash-completion/completions/
 %{_datadir}/bash-completion/completions/%{name}
 %{_mandir}/man8/%{name}.8*
+%{_datadir}/metainfo/org.kernel.software.network.ethtool.metainfo.xml
 
 %changelog
+* Thu Jul 31 2025 Mohammad Heib <mheib@redhat.com> - 2:6.15-2
+- netlink: fix missing headers in text output.
+  Resolves: RHEL-106540
+
+* Tue Jun 24 2025 Mohammad Heib <mheib@redhat.com> - 2:6.15-1
+- Update to latest upstream release v6.15.
+  Resolves: RHEL-94954
+
 * Wed Oct  9 2024 Ivan Vecera <ivecera@redhat.com> - 2:6.11-1
 - Upgrade to 6.11 (RHEL-60269)
 
